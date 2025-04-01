@@ -52,10 +52,90 @@ static void MX_USART2_UART_Init(void);
 static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
 
+// define I2C functions
+int I2C_Write(uint8_t addr, uint8_t* data, uint16_t length);
+int I2C_Read(uint8_t addr, uint8_t* data, uint16_t length);
+
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+// implement the I2C functions
+int I2C_Write(uint8_t addr, uint8_t* data, uint16_t length)
+{
+
+	// wait for I2C peripheral to be ready
+	while (I2C1->SR2 & I2C_SR2_BUSY);		// checks I2C_SR2_BSY to see if peripheral is currently busy
+
+	// generate a START condition
+	I2C1->CR1 |= I2C_CR1_START;				// sets I2C_CR1_START bit
+	// wait for START bit to be set
+	while (!(I2C1->SR1 & I2C_SR1_SB));		// checks I2C_SR1_SB to see if start condition is generated
+
+	// send the slave address with the write bit (0)
+	I2C1->DR = (addr << 1);					// shifts address for 7-bit addressing
+	// wait for address to be sent
+	while (!(I2C1->SR1 & I2C_SR1_ADDR));	// checks I2C_SR1_ADDR to see if address was received and matches
+
+	// clear the ADDR bit
+	volatile uint32_t temp = I2C1->SR2;
+
+	// transmit data byte by byte
+	for (uint16_t i = 0; i < length; i++)
+	{
+		// wait until the data register is empty
+		while (!(I2C1->SR1 & I2C_SR1_TXE));	// checks I2C_SR1_TXE to see if data register is empty
+
+		// send data byte
+		I2C1->DR = data[i];
+	}
+
+	// wait for transmission to finish
+	while(!(I2C1->SR1 & I2C_SR1_BTF));		// checks I2C_SR1_BTF to see if data transfer was successful
+
+	// generate stop condition
+	I2C1->CR1 |= I2C_CR1_STOP;
+
+	return 0;
+
+}
+
+int I2C_Read(uint8_t addr, uint8_t* data, uint16_t length)
+{
+	// wait for I2C peripheral to be ready
+	while (I2C1->SR2 & I2C_SR2_BUSY);
+
+	// generate a START condition
+	I2C1->CR1 |= I2C_CR1_START;
+	// wait for START bit to be set
+	while(!(I2C1->SR1 & I2C_SR1_SB));
+
+	// send slave address with read bit (1)
+	I2C1->DR = (addr << 1) | 1;
+	// check is address was sent successfully
+	while(!(I2C1->SR1 & I2C_SR1_ADDR));
+
+	// clear the ADDR bit
+	volatile uint32_t temp = I2C1->SR2;
+
+	// receieve data byte by byte
+	for (uint16_t i = 0; i < length; i++)
+	{
+		// wait until data is received
+		while (!(I2C1->SR1 & I2C_SR1_RXNE));	// checks I2C_SR1_RXNE to see if data register is not empty
+		// read received byte
+		data[i] = I2C1->DR;
+	}
+
+	// generate a STOP condition
+	I2C1->CR1 |= I2C_CR1_STOP;
+
+	return 0;
+
+}
+
 
 /* USER CODE END 0 */
 
@@ -97,10 +177,10 @@ int main(void)
 
   // Enable clock for GPIOB (PB6 and PB7)
   	  // AHB is used for high speed peripherals and memory access
-  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
+  // RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
   // Enable clock for I2C1
   	  // APB is used for low speed peripherals
-  RCC->APB1ENR |= RCC_APB1ENR_I2C1EN;
+  // RCC->APB1ENR |= RCC_APB1ENR_I2C1EN;
 
 
 
@@ -185,19 +265,11 @@ static void MX_I2C1_Init(void)
   PB6   ------> I2C1_SCL
   PB7   ------> I2C1_SDA
   */
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_6;
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_6|LL_GPIO_PIN_7;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_4;
-  LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_7;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   GPIO_InitStruct.Alternate = LL_GPIO_AF_4;
   LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
