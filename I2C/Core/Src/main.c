@@ -95,6 +95,16 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
+  // Enable clock for GPIOB (PB6 and PB7)
+  	  // AHB is used for high speed peripherals and memory access
+  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
+  // Enable clock for I2C1
+  	  // APB is used for low speed peripherals
+  RCC->APB1ENR |= RCC_APB1ENR_I2C1EN;
+
+
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
