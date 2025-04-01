@@ -51,6 +51,7 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
+// defines UART functions
 void UART2_send(char c);
 void UART2_string(char *str);
 char UART2_receive(void);
@@ -60,27 +61,23 @@ char UART2_receive(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-//void UART2_send(char c)
-//{
-//	// USART2->SR contains flags of the USART peripheral (contains USART_SR_TXE)
-//	// USART_SR_TXE if a bit mask that is set when the transmit data register is empty
-//	// when ANDed together, it checks if the bit mask is set
-//	while (!(USART2->SR & USART_SR_TXE));	// wait until TX is empty
-//
-//	USART2->DR = c;		// load data into transmit register
-//}
-
+// sends character into the Tx register
 void UART2_send(char c) {
+	// USART2->SR contains flags of the USART peripheral (contains USART_SR_TXE)
+	// USART_SR_TXE if a bit mask that is set when the transmit data register is empty
+	// when ANDed together, it checks if the bit mask is set
     while (!(USART2->SR & USART_SR_TXE));  // Wait until TX is empty
     USART2->DR = c;  // Load data into transmit register
 }
 
+// parses inputted string into characters for the send function
 void UART2_string(char *str) {
     while (*str) {
         UART2_send(*str++);
     }
 }
 
+// receives character from the Rx register
 char UART2_receive(void) {
     while (!(USART2->SR & USART_SR_RXNE));  // Wait for RX buffer to fill
     return USART2->DR;  // Read received data
